@@ -4,8 +4,26 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_analytics/observer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_crashlytics/flutter_crashlytics.dart';
 
-void main() => runApp(MyApp());
+void main() async {
+  bool emitCrash = false;
+
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.dumpErrorToConsole(details);
+    if (emitCrash) {
+      Zone.current.handleUncaughtError(details.exception, details.stack);
+    }
+  };
+
+  await FlutterCrashlytics().initialize();
+
+  runZoned<Future<Null>>(() async {
+    runApp(MyApp());
+  }, onError: (error, stackTrace) async {
+    await FlutterCrashlytics().reportCrash(error, stackTrace, forceCrash: true);
+  });
+}
 
 class MyApp extends StatelessWidget {
   static FirebaseAnalytics analytics = FirebaseAnalytics();
@@ -138,6 +156,12 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: Text('Launch screen'),
                 onPressed: () {
                   Navigator.of(context).pushNamed("/second");
+                },
+              ),
+              RaisedButton(
+                child: Text('No route'),
+                onPressed: () {
+                  Navigator.of(context).pushNamed("/Nooooo");
                 },
               ),
             ],
